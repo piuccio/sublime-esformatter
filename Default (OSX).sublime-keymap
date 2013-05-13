@@ -1,0 +1,5 @@
+[  
+    {   
+        "keys": ["super+alt+f"], "command": "esformatter"   
+    }  
+] 
