@@ -86,7 +86,7 @@ class NodeCall(threading.Thread):
 
     def run(self):
         try:
-            process = subprocess.Popen(self.cmd, bufsize=-1, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.SW_HIDE)
+            process = subprocess.Popen(self.cmd, bufsize=160*len(self.code), shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.SW_HIDE)
             stdout, stderr = process.communicate(self.code)
             self.result = re.sub(r'(\r|\r\n|\n)\Z', '', stdout)
             return
