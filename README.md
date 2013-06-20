@@ -8,15 +8,26 @@ Unlike other beautifiers it gives complete control over the coding style.
 
 # Installation
 
-Download and unzip inside
+Using [Sublime Package Control](http://wbond.net/sublime_packages/package_control) just search for
+
+`EsFormatter`
+
+## Manual installation
+
+This is not recommended, but if you know what you're doing, go on:
+
+Clone this repository or download and unzip inside
 
 Mac
 
 * `~/Library/Application Support/Sublime Text 3/Packages/EsFormatter`
 
-Windows
+Windows XP
 
-* `C:\Documents and Settings\<user>\Application Data\Sublime Text 2\Packages\EsFormatter`
+* `C:\Documents and Settings\<user>\Application Data\Sublime Text 2\Packages\EsFormatter` 
+
+Windows 7
+* `C:\Users\<user>\AppData\Roaming\Sublime Text 2\Packages\EsFormatter`
 
 Linux
 
