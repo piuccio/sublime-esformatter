@@ -1,6 +1,6 @@
 # Sublime EsFormatter - Sublime Text Plugin
 
-Sublime EsFormatter is a JavaScript formatter plugin for the text editor [SublimeText 2](http://www.sublimetext.com/2).
+Sublime EsFormatter is a JavaScript formatter plugin for the text editor [SublimeText](http://www.sublimetext.com) 2/3.
 
 It is based on [esformatter](https://github.com/millermedeiros/esformatter), an extremely configurable JavaScript formatter.
 

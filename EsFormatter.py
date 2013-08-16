@@ -1,6 +1,7 @@
-import sublime, sublime_plugin, subprocess, threading, json, re, platform
-ON_WINDOWS = platform.system() is 'Windows'
+import sublime, sublime_plugin, subprocess, threading, json, re, platform, sys, os
 
+ON_WINDOWS = platform.system() is 'Windows'
+ST2 = sys.version_info < (3, 0)
 
 class EsformatterCommand(sublime_plugin.TextCommand):
     def run(self, edit):
@@ -8,15 +9,12 @@ class EsformatterCommand(sublime_plugin.TextCommand):
         settings = sublime.load_settings("EsFormatter.sublime-settings")
         format_options = json.dumps(settings.get("format_options"))
 
-        # start editing
-        edit = self.view.begin_edit("esformatter")
-
         if (len(self.view.sel()) == 1 and self.view.sel()[0].empty()):
             # Only one caret and no text selected, format the whole file
             textContent = self.view.substr(sublime.Region(0, self.view.size()))
             thread = NodeCall(textContent, format_options)
             thread.start()
-            self.handle_thread(thread, lambda: self.replaceFile(edit, thread))
+            self.handle_thread(thread, lambda: self.replaceFile(thread))
         else:
             # Format each and every selection block
             threads = []
@@ -28,26 +26,28 @@ class EsformatterCommand(sublime_plugin.TextCommand):
                 threads.append(thread)
                 thread.start()
 
-            self.handle_threads(threads, lambda process: self.replaceSelections(edit, process))
+            self.handle_threads(threads, lambda process: self.replaceSelections(process))
 
-    def replaceFile(self, edit, thread):
+    def replaceFile(self, thread):
         '''Replace the entire file content with the formatted text.'''
-        self.view.replace(edit, sublime.Region(0, self.view.size()), thread.result)
-        self.view.end_edit(edit)
+        self.view.run_command("esformat_update_content", {"text": thread.result})
         sublime.status_message("File formatted")
 
-    def replaceSelections(self, edit, threads):
+
+    def replaceSelections(self, threads):
         '''Replace the content of a list of selections.
         This is called when there are multiple cursors or a selection of text'''
         # Modify the selections from top to bottom to account for different text length
         offset = 0
+        regions = []
         for thread in sorted(threads, key=lambda t: t.region.begin()):
-            region = thread.region
             if offset:
-                region = sublime.Region(thread.region.begin() + offset, thread.region.end() + offset)
-            self.view.replace(edit, region, thread.result)
+                region = [thread.region.begin() + offset, thread.region.end() + offset, thread.result]
+            else:
+                region = [thread.region.begin(), thread.region.end(), thread.result]
             offset += len(thread.result) - len(thread.code)
-        self.view.end_edit(edit)
+            regions.append(region)
+        self.view.run_command("esformat_update_content", {"regions": regions})
 
     def handle_thread(self, thread, callback):
         if thread.is_alive():
@@ -81,7 +81,7 @@ class NodeCall(threading.Thread):
     def __init__(self, code, options, id=0, region=None):
         self.code = code
         self.region = region
-        exec_path = sublime.packages_path() + "/EsFormatter/lib/esformatter.js"
+        exec_path = os.path.join(sublime.packages_path(), "EsFormatter", "lib", "esformatter.js")
         self.cmd = self.getNodeCommand(exec_path, options)
         self.result = None
         threading.Thread.__init__(self)
@@ -89,10 +89,16 @@ class NodeCall(threading.Thread):
     def run(self):
         try:
             process = subprocess.Popen(self.cmd, bufsize=160*len(self.code), shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=self.getStartupInfo())
-            stdout, stderr = process.communicate(self.code)
-            self.result = re.sub(r'(\r|\r\n|\n)\Z', '', stdout)
+            if ST2:
+                stdout, stderr = process.communicate(self.code)
+                self.result = re.sub(r'(\r|\r\n|\n)\Z', '', stdout)
+            else:
+                stdout, stderr = process.communicate(self.code.encode())
+                self.result = re.sub(r'(\r|\r\n|\n)\Z', '', str(stdout, encoding='utf-8'))
+
             if stderr:
                 sublime.error_message(stderr)
+
         except Exception as e:
             sublime.error_message(str(e))
             self.result = False
@@ -109,4 +115,12 @@ class NodeCall(threading.Thread):
         if ON_WINDOWS:
             return ["node", libPath, options]
         else:
-            return "%s '%s' '%s'" % ("/usr/local/bin/node", libPath, options)
+            return "{0} '{1}' '{2}'".format("/usr/local/bin/node", libPath, options)
+
+class EsformatUpdateContent(sublime_plugin.TextCommand):
+    def run(self, edit, text=None, regions=None):
+        if text:
+            self.view.replace(edit, sublime.Region(0, self.view.size()), text)
+        else:
+            for region in regions:
+                self.view.replace(edit, sublime.Region(region[0], region[1]), region[2])
