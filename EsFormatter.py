@@ -1,4 +1,5 @@
-import sublime, sublime_plugin, subprocess, threading, json, re
+import sublime, sublime_plugin, subprocess, threading, json, re, platform
+ON_WINDOWS = platform.system() is 'Windows'
 
 
 class EsformatterCommand(sublime_plugin.TextCommand):
@@ -33,6 +34,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
         '''Replace the entire file content with the formatted text.'''
         self.view.replace(edit, sublime.Region(0, self.view.size()), thread.result)
         self.view.end_edit(edit)
+        sublime.status_message("File formatted")
 
     def replaceSelections(self, edit, threads):
         '''Replace the content of a list of selections.
@@ -80,18 +82,31 @@ class NodeCall(threading.Thread):
         self.code = code
         self.region = region
         exec_path = sublime.packages_path() + "/EsFormatter/lib/esformatter.js"
-        self.cmd = ["node", exec_path, options]
+        self.cmd = self.getNodeCommand(exec_path, options)
         self.result = None
         threading.Thread.__init__(self)
 
     def run(self):
         try:
-            process = subprocess.Popen(self.cmd, bufsize=160*len(self.code), shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.SW_HIDE)
+            process = subprocess.Popen(self.cmd, bufsize=160*len(self.code), shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=self.getStartupInfo())
             stdout, stderr = process.communicate(self.code)
             self.result = re.sub(r'(\r|\r\n|\n)\Z', '', stdout)
-            return
+            if stderr:
+                sublime.error_message(stderr)
         except Exception as e:
-            stderr = str(e)
+            sublime.error_message(str(e))
             self.result = False
 
-        sublime.error_message(stderr)
+    def getStartupInfo(self):
+        if ON_WINDOWS:
+            info = subprocess.STARTUPINFO()
+            info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            info.wShowWindow = subprocess.SW_HIDE
+            return info
+        return None
+
+    def getNodeCommand(self, libPath, options):
+        if ON_WINDOWS:
+            return ["node", libPath, options]
+        else:
+            return "%s '%s' '%s'" % ("/usr/local/bin/node", libPath, options)
