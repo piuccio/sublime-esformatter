@@ -2,9 +2,13 @@ import sublime, sublime_plugin, subprocess, threading, json, re, platform, sys, 
 
 ON_WINDOWS = platform.system() is 'Windows'
 ST2 = sys.version_info < (3, 0)
+NODE = None
 
 class EsformatterCommand(sublime_plugin.TextCommand):
     def run(self, edit):
+        if (NODE.mightWork() == False):
+            return
+
         # Settings for formatting
         settings = sublime.load_settings("EsFormatter.sublime-settings")
         format_options = json.dumps(settings.get("format_options"))
@@ -82,13 +86,13 @@ class NodeCall(threading.Thread):
         self.code = code
         self.region = region
         exec_path = os.path.join(sublime.packages_path(), "EsFormatter", "lib", "esformatter.js")
-        self.cmd = self.getNodeCommand(exec_path, options)
+        self.cmd = getNodeCommand(exec_path, options)
         self.result = None
         threading.Thread.__init__(self)
 
     def run(self):
         try:
-            process = subprocess.Popen(self.cmd, bufsize=160*len(self.code), shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=self.getStartupInfo())
+            process = subprocess.Popen(self.cmd, bufsize=160*len(self.code), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=getStartupInfo())
             if ST2:
                 stdout, stderr = process.communicate(self.code)
                 self.result = re.sub(r'(\r|\r\n|\n)\Z', '', stdout)
@@ -103,19 +107,49 @@ class NodeCall(threading.Thread):
             sublime.error_message(str(e))
             self.result = False
 
-    def getStartupInfo(self):
-        if ON_WINDOWS:
-            info = subprocess.STARTUPINFO()
-            info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            info.wShowWindow = subprocess.SW_HIDE
-            return info
-        return None
+def getStartupInfo():
+    if ON_WINDOWS:
+        info = subprocess.STARTUPINFO()
+        info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        info.wShowWindow = subprocess.SW_HIDE
+        return info
+    return None
 
-    def getNodeCommand(self, libPath, options):
-        if ON_WINDOWS:
+def getNodeCommand(libPath, options=None):
+    # I wonder if there's a better way to do this in Python instead of nested if-s
+    if ON_WINDOWS:
+        if (options):
             return ["node", libPath, options]
         else:
+            return ["node", libPath]
+    else:
+        if (options):
             return "{0} '{1}' '{2}'".format("/usr/local/bin/node", libPath, options)
+        else:
+            return "{0} '{1}'".format("/usr/local/bin/node", libPath)
+
+class NodeCheck:
+    '''This class check whether node.js is installed and available in the path.
+    The check is done only once when mightWork() is called for the first time.
+    Being a tri-state class it's better not accessing it's properties but only call mightWork()'''
+    def __init__(self):
+        self.works = False
+        self.checkDone = False
+
+    def mightWork(self):
+        if (self.checkDone):
+            return self.works
+
+        # Run node version to know if it's in the path
+        try:
+            subprocess.Popen(getNodeCommand("--version"), bufsize=1, stdin=None, stdout=None, stderr=None, startupinfo=getStartupInfo())
+            self.works = True
+        except OSError as e:
+            sublime.error_message("It looks like node is not installed.\nPlease make sure that node.js is installed and in your PATH")
+
+        return self.works
+
+NODE = NodeCheck()
 
 class EsformatUpdateContent(sublime_plugin.TextCommand):
     def run(self, edit, text=None, regions=None):
