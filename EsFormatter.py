@@ -30,7 +30,8 @@ class EsformatterCommand(sublime_plugin.TextCommand):
                 threads.append(thread)
                 thread.start()
 
-            self.handle_threads(threads, lambda process: self.replaceSelections(process))
+            self.handle_threads(threads, lambda process, lastError: self.handleSyntaxErrors(process, lastError, format_options))
+
 
     def replaceFile(self, thread):
         '''Replace the entire file content with the formatted text.'''
@@ -38,28 +39,52 @@ class EsformatterCommand(sublime_plugin.TextCommand):
         sublime.status_message("File formatted")
 
 
-    def replaceSelections(self, threads):
+    def handleSyntaxErrors(self, threads=None, lastError=None, format_options=''):
+        '''When formatting whole lines there might be a syntax error because we select
+        the whole line content. In that case, fall-back to the user selection.'''
+        if (lastError is None and threads is not None):
+            self.replaceSelections(threads)
+        else:
+            # Format each and every selection block
+            threads = []
+            for selection in self.view.sel():
+                # Take only the user selection
+                textContent = self.view.substr(selection)
+                thread = NodeCall(textContent, format_options, len(threads), selection)
+                threads.append(thread)
+                thread.start()
+
+            self.handle_threads(threads, lambda process, lastError: self.replaceSelections(process, lastError))
+
+
+    def replaceSelections(self, threads, lastError):
         '''Replace the content of a list of selections.
         This is called when there are multiple cursors or a selection of text'''
-        # Modify the selections from top to bottom to account for different text length
-        offset = 0
-        regions = []
-        for thread in sorted(threads, key=lambda t: t.region.begin()):
-            if offset:
-                region = [thread.region.begin() + offset, thread.region.end() + offset, thread.result]
-            else:
-                region = [thread.region.begin(), thread.region.end(), thread.result]
-            offset += len(thread.result) - len(thread.code)
-            regions.append(region)
-        self.view.run_command("esformat_update_content", {"regions": regions})
+        if (lastError):
+            sublime.error_message("Error (2):" + lastError)
+        else:
+            # Modify the selections from top to bottom to account for different text length
+            offset = 0
+            regions = []
+            for thread in sorted(threads, key=lambda t: t.region.begin()):
+                if offset:
+                    region = [thread.region.begin() + offset, thread.region.end() + offset, thread.result]
+                else:
+                    region = [thread.region.begin(), thread.region.end(), thread.result]
+                offset += len(thread.result) - len(thread.code)
+                regions.append(region)
+            self.view.run_command("esformat_update_content", {"regions": regions})
+
 
     def handle_thread(self, thread, callback):
         if thread.is_alive():
             sublime.set_timeout(lambda: self.handle_thread(thread, callback), 100)
         elif thread.result is not False:
             callback()
+        else:
+            sublime.error_message("Error (1):" + thread.error)
 
-    def handle_threads(self, threads, callback, process=False):
+    def handle_threads(self, threads, callback, process=False, lastError=None):
         next_threads = []
         if process is False:
             process = []
@@ -70,15 +95,16 @@ class EsformatterCommand(sublime_plugin.TextCommand):
                 continue
             if thread.result is False:
                 # This thread failed
+                lastError = thread.error
                 continue
             # Thread completed correctly
             process.append(thread)
 
         if len(next_threads):
             # Some more threads to wait
-            sublime.set_timeout(lambda: self.handle_threads(next_threads, callback, process), 100)
+            sublime.set_timeout(lambda: self.handle_threads(next_threads, callback, process, lastError), 100)
         else:
-            callback(process)
+            callback(process, lastError)
 
 
 class NodeCall(threading.Thread):
@@ -104,8 +130,8 @@ class NodeCall(threading.Thread):
                 sublime.error_message(stderr)
 
         except Exception as e:
-            sublime.error_message(str(e))
             self.result = False
+            self.error = str(e)
 
 def getStartupInfo():
     if ON_WINDOWS:
