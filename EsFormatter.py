@@ -43,7 +43,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
         '''When formatting whole lines there might be a syntax error because we select
         the whole line content. In that case, fall-back to the user selection.'''
         if (lastError is None and threads is not None):
-            self.replaceSelections(threads)
+            self.replaceSelections(threads, None)
         else:
             # Format each and every selection block
             threads = []
@@ -127,7 +127,8 @@ class NodeCall(threading.Thread):
                 self.result = re.sub(r'(\r|\r\n|\n)\Z', '', str(stdout, encoding='utf-8'))
 
             if stderr:
-                sublime.error_message(stderr)
+                self.result = False
+                self.error = str(stderr)
 
         except Exception as e:
             self.result = False
@@ -142,17 +143,10 @@ def getStartupInfo():
     return None
 
 def getNodeCommand(libPath, options=None):
-    # I wonder if there's a better way to do this in Python instead of nested if-s
-    if ON_WINDOWS:
-        if (options):
-            return ["node", libPath, options]
-        else:
-            return ["node", libPath]
+    if (options):
+        return ["node", libPath, options]
     else:
-        if (options):
-            return "{0} '{1}' '{2}'".format("/usr/local/bin/node", libPath, options)
-        else:
-            return "{0} '{1}'".format("/usr/local/bin/node", libPath)
+        return ["node", libPath]
 
 class NodeCheck:
     '''This class check whether node.js is installed and available in the path.
