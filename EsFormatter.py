@@ -4,7 +4,6 @@ ON_WINDOWS = platform.system() is 'Windows'
 ST2 = sys.version_info < (3, 0)
 NODE = None
 
-print(os.environ['PATH'])
 if not ON_WINDOWS:
     # Extend Path to catch Node installed via HomeBrew
     os.environ['PATH'] += ':/usr/local/bin'
