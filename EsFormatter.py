@@ -20,7 +20,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
         if (len(self.view.sel()) == 1 and self.view.sel()[0].empty()):
             # Only one caret and no text selected, format the whole file
             textContent = self.view.substr(sublime.Region(0, self.view.size()))
-            thread = NodeCall(textContent, format_options)
+            thread = NodeCall(textContent.encode('utf-8'), format_options)
             thread.start()
             self.handle_thread(thread, lambda: self.replaceFile(thread))
         else:
@@ -30,7 +30,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
                 # Take everything from the beginning to the end of line
                 region = self.view.line(selection)
                 textContent = self.view.substr(region)
-                thread = NodeCall(textContent, format_options, len(threads), region)
+                thread = NodeCall(textContent.encode('utf-8'), format_options, len(threads), region)
                 threads.append(thread)
                 thread.start()
 
@@ -125,9 +125,9 @@ class NodeCall(threading.Thread):
             process = subprocess.Popen(self.cmd, bufsize=160*len(self.code), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=getStartupInfo())
             if ST2:
                 stdout, stderr = process.communicate(self.code)
-                self.result = re.sub(r'(\r|\r\n|\n)\Z', '', stdout)
+                self.result = re.sub(r'(\r|\r\n|\n)\Z', '', stdout).decode('utf-8')
             else:
-                stdout, stderr = process.communicate(self.code.encode())
+                stdout, stderr = process.communicate(self.code)
                 self.result = re.sub(r'(\r|\r\n|\n)\Z', '', str(stdout, encoding='utf-8'))
 
             if stderr:
