@@ -148,9 +148,9 @@ def getStartupInfo():
 
 def getNodeCommand(libPath, options=None):
     if (options):
-        return ["node", libPath, options]
+        return [NODE.nodeName, libPath, options]
     else:
-        return ["node", libPath]
+        return [NODE.nodeName, libPath]
 
 class NodeCheck:
     '''This class check whether node.js is installed and available in the path.
@@ -159,6 +159,7 @@ class NodeCheck:
     def __init__(self):
         self.works = False
         self.checkDone = False
+        self.nodeName = "node"
 
     def mightWork(self):
         if (self.checkDone):
@@ -169,7 +170,12 @@ class NodeCheck:
             subprocess.Popen(getNodeCommand("--version"), bufsize=1, stdin=None, stdout=None, stderr=None, startupinfo=getStartupInfo())
             self.works = True
         except OSError as e:
-            sublime.error_message("It looks like node is not installed.\nPlease make sure that node.js is installed and in your PATH")
+            try:
+                self.nodeName = "nodejs"
+                subprocess.Popen(getNodeCommand("--version"), bufsize=1, stdin=None, stdout=None, stderr=None, startupinfo=getStartupInfo())
+                self.works = True
+            except OSError as e:
+                sublime.error_message("It looks like node is not installed.\nPlease make sure that node.js is installed and in your PATH")
 
         return self.works
 
