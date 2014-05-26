@@ -10,11 +10,12 @@ if not ON_WINDOWS:
 
 class EsformatterCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        if (NODE.mightWork() == False):
-            return
-
         # Settings for formatting
         settings = sublime.load_settings("EsFormatter.sublime-settings")
+
+        if (NODE.mightWork(settings.get("nodejs_path")) == False):
+            return
+
         format_options = json.dumps(settings.get("format_options"))
 
         if (len(self.view.sel()) == 1 and self.view.sel()[0].empty()):
@@ -161,23 +162,36 @@ class NodeCheck:
         self.checkDone = False
         self.nodeName = "node"
 
-    def mightWork(self):
+    def mightWork(self, path):
         if (self.checkDone):
             return self.works
 
+        if (path):
+            self.nodeName = path
+            self.tryWithSelfName()
+        else:
+            self.autodetect()
+
+        if (self.works is False):
+            sublime.error_message("It looks like node is not installed.\nPlease make sure that node.js is installed and in your PATH")
+
+        return self.works
+
+    def autodetect(self):
         # Run node version to know if it's in the path
+        self.tryWithSelfName()
+        if (self.works is False):
+            self.nodeName = "nodejs"
+            self.tryWithSelfName()
+
+    def tryWithSelfName(self):
         try:
+            # call node version with whatever path is defined in nodeName
             subprocess.Popen(getNodeCommand("--version"), bufsize=1, stdin=None, stdout=None, stderr=None, startupinfo=getStartupInfo())
             self.works = True
         except OSError as e:
-            try:
-                self.nodeName = "nodejs"
-                subprocess.Popen(getNodeCommand("--version"), bufsize=1, stdin=None, stdout=None, stderr=None, startupinfo=getStartupInfo())
-                self.works = True
-            except OSError as e:
-                sublime.error_message("It looks like node is not installed.\nPlease make sure that node.js is installed and in your PATH")
+            self.works = False
 
-        return self.works
 
 NODE = NodeCheck()
 
