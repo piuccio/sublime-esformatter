@@ -3,13 +3,17 @@ import sublime, sublime_plugin, subprocess, threading, json, re, platform, sys, 
 ON_WINDOWS = platform.system() is 'Windows'
 ST2 = sys.version_info < (3, 0)
 NODE = None
+# I don't really like this, but formatting is async, so I must
+# save the file again after it's been formatted (auto_format)
+# This flag prevents loops
+AM_I_FORMATTING_AFTER_SAVE = False
 
 if not ON_WINDOWS:
     # Extend Path to catch Node installed via HomeBrew
     os.environ['PATH'] += ':/usr/local/bin'
 
 class EsformatterCommand(sublime_plugin.TextCommand):
-    def run(self, edit):
+    def run(self, edit, save=False, ignoreSelection=False):
         # Settings for formatting
         settings = sublime.load_settings("EsFormatter.sublime-settings")
 
@@ -18,12 +22,12 @@ class EsformatterCommand(sublime_plugin.TextCommand):
 
         format_options = json.dumps(settings.get("format_options"))
 
-        if (len(self.view.sel()) == 1 and self.view.sel()[0].empty()):
+        if (ignoreSelection or len(self.view.sel()) == 1 and self.view.sel()[0].empty()):
             # Only one caret and no text selected, format the whole file
             textContent = self.view.substr(sublime.Region(0, self.view.size()))
-            thread = NodeCall(textContent.encode('utf-8'), format_options)
+            thread = NodeCall(textContent, format_options)
             thread.start()
-            self.handle_thread(thread, lambda: self.replaceFile(thread))
+            self.handle_thread(thread, lambda: self.replaceFile(thread, save))
         else:
             # Format each and every selection block
             threads = []
@@ -31,17 +35,20 @@ class EsformatterCommand(sublime_plugin.TextCommand):
                 # Take everything from the beginning to the end of line
                 region = self.view.line(selection)
                 textContent = self.view.substr(region)
-                thread = NodeCall(textContent.encode('utf-8'), format_options, len(threads), region)
+                thread = NodeCall(textContent, format_options, len(threads), region)
                 threads.append(thread)
                 thread.start()
 
             self.handle_threads(threads, lambda process, lastError: self.handleSyntaxErrors(process, lastError, format_options))
 
 
-    def replaceFile(self, thread):
+    def replaceFile(self, thread, save=False):
         '''Replace the entire file content with the formatted text.'''
         self.view.run_command("esformat_update_content", {"text": thread.result})
         sublime.status_message("File formatted")
+        if (save):
+            self.view.run_command("save")
+
 
 
     def handleSyntaxErrors(self, threads=None, lastError=None, format_options=''):
@@ -66,7 +73,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
         '''Replace the content of a list of selections.
         This is called when there are multiple cursors or a selection of text'''
         if (lastError):
-            sublime.error_message("Error (2):" + lastError)
+            sublime.error_message("Error (2):" + self.formatError(lastError))
         else:
             # Modify the selections from top to bottom to account for different text length
             offset = 0
@@ -80,6 +87,13 @@ class EsformatterCommand(sublime_plugin.TextCommand):
                 regions.append(region)
             self.view.run_command("esformat_update_content", {"regions": regions})
 
+
+    def formatError(self, message):
+        match = re.match( r".*__EX-MESSAGE>_(.*)_<EX-MESSAGE__.*", message, re.S)
+        if match:
+            return match.group(1)
+        else:
+            return message
 
     def handle_thread(self, thread, callback):
         if thread.is_alive():
@@ -114,7 +128,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
 
 class NodeCall(threading.Thread):
     def __init__(self, code, options, id=0, region=None):
-        self.code = code
+        self.code = code.encode('utf-8')
         self.region = region
         exec_path = os.path.join(sublime.packages_path(), "EsFormatter", "lib", "esformatter.js")
         self.cmd = getNodeCommand(exec_path, options)
@@ -133,7 +147,10 @@ class NodeCall(threading.Thread):
 
             if stderr:
                 self.result = False
-                self.error = str(stderr)
+                if ST2:
+                    self.error = str(stderr.decode('utf-8'))
+                else:
+                    self.error = str(stderr, encoding='utf-8')
 
         except Exception as e:
             self.result = False
@@ -202,3 +219,31 @@ class EsformatUpdateContent(sublime_plugin.TextCommand):
         else:
             for region in regions:
                 self.view.replace(edit, sublime.Region(region[0], region[1]), region[2])
+
+
+class EsformatEventListener(sublime_plugin.EventListener):
+    def on_pre_save(self, view):
+        global AM_I_FORMATTING_AFTER_SAVE
+        if AM_I_FORMATTING_AFTER_SAVE:
+            AM_I_FORMATTING_AFTER_SAVE = False
+            return
+
+        AM_I_FORMATTING_AFTER_SAVE = True
+        settings = sublime.load_settings("EsFormatter.sublime-settings")
+        if (settings.get("format_on_save") and self.isJavascript(view)):
+            view.window().run_command("esformatter", {
+                "save": True,
+                "ignoreSelection": True
+            })
+
+    def isJavascript(self, view):
+        # Check the file extension
+        name = view.file_name()
+        if (name and os.path.splitext(name)[1][1:] in ["js"]):
+            return True
+        # If it has no name (?) or it's not a JS, check the syntax
+        syntax = view.settings().get("syntax")
+        if (syntax and "javascript" in syntax.split("/")[-1].lower()):
+            return True
+
+        return False

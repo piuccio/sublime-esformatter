@@ -1,5 +1,5 @@
 {
-    // Format the file when saved - this option is not available yet, sorry :(
+    // Format the file when saved
     "format_on_save": false,
 
     // Path to the node executable, by default it tries to resolve the executable
