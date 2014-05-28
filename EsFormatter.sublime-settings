@@ -9,6 +9,12 @@
     // EsFormatter specific options
     // default are specified here https://github.com/millermedeiros/esformatter/blob/master/lib/preset/default.json
     "format_options" : {
+
+        // You can change the preset for any other available on ESFormatter
+        // Ref: https://github.com/millermedeiros/esformatter/tree/master/lib/preset
+        // e.g.: "preset": "jquery"
+        "preset": "default",
+
         "indent": {
             "value": "  ",
             "ArrayExpression": 1,
