@@ -43,6 +43,31 @@ The default keyboard mapping is `ctrl+alt+f` or `cmd+alf+f`.
 
 Refer to the configuration of [esformatter](https://github.com/millermedeiros/esformatter)
 
+## Preset
+
+You can use any [preset](https://github.com/millermedeiros/esformatter/tree/master/lib/preset) already available in esformatter.
+
+Modify the user settings of EsFormatter such as
+
+Preferences -> Package Settings -> EsFormatter -> Settings- User
+
+```json
+"format_options" : {
+    "preset": "jquery"
+}
+```
+
+It's also possible to combine presets and custom options
+
+```json
+"format_options" : {
+    "preset": "jquery",
+    "indent": {
+        // your values here
+    },
+}
+```
+
 # Contribute
 
 The python script simply calls a bundled version of `esformatter`. To generate a new bundle it's enough to go to `lib` folder, modify `package.json` to point to the desired version of `esformatter` and run

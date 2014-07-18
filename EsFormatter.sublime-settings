@@ -1,20 +1,27 @@
 {
-    // Format the file when saved - this option is not available yet, sorry :(
+    // Format the file when saved
     "format_on_save": false,
+
+    // Path to the node executable, by default it tries to resolve the executable
+    // for the command 'node' or 'nodejs'. Change this value to specify your own path
+    "nodejs_path": null,
 
     // EsFormatter specific options
     // default are specified here https://github.com/millermedeiros/esformatter/blob/master/lib/preset/default.json
     "format_options" : {
+
+        // You can change the preset for any other available on ESFormatter
+        // Ref: https://github.com/millermedeiros/esformatter/tree/master/lib/preset
+        // e.g.: "preset": "jquery"
+        "preset": "default",
+
         "indent": {
             "value": "  ",
             "ArrayExpression": 1,
+            "AssignmentExpression": 1,
             "BinaryExpression": 1,
-            "ChainedMemberExpression": 1,
             "ConditionalExpression": 1,
-            "MultipleVariableDeclaration": 1,
-            "ObjectExpression": 1,
-            "SwitchCase": 1,
-            "SwitchStatement": 1,
+            "CallExpression": 1,
             "CatchClause": 1,
             "DoWhileStatement": 1,
             "ForInStatement": 1,
@@ -22,10 +29,15 @@
             "FunctionDeclaration": 1,
             "FunctionExpression": 1,
             "IfStatement": 1,
-            "IfStatementConditional": 1,
+            "MemberExpression": 1,
+            "MultipleVariableDeclaration": 1,
+            "ObjectExpression": 1,
+            "ReturnStatement": 1,
+            "SwitchCase": 1,
+            "SwitchStatement": 1,
+            "TopLevelFunctionBlock": 1,
             "TryStatement": 1,
-            "WhileStatement": 1,
-            "TopLevelFunctionBlock": 1
+            "WhileStatement": 1
         },
         "lineBreak": {
             "value": "\n",
@@ -37,10 +49,12 @@
                 "ConditionalExpression": ">=1",
                 "CatchOpeningBrace": 0,
                 "CatchClosingBrace": ">=1",
+                "CatchKeyword": 0,
                 "DeleteOperator": ">=1",
                 "DoWhileStatement": ">=1",
                 "DoWhileStatementOpeningBrace": 0,
                 "DoWhileStatementClosingBrace": ">=1",
+                "EndOfFile": -1,
                 "EmptyStatement": -1,
                 "FinallyOpeningBrace": 0,
                 "FinallyClosingBrace": ">=1",
@@ -94,6 +108,7 @@
                 "CallExpression": -1,
                 "CatchOpeningBrace": ">=1",
                 "CatchClosingBrace": ">=0",
+                "CatchKeyword": 0,
                 "ConditionalExpression": ">=1",
                 "DeleteOperator": ">=1",
                 "DoWhileStatement": ">=1",
@@ -160,9 +175,10 @@
                 "BinaryExpressionOperator": 1,
                 "BlockComment": 1,
                 "CallExpression": -1,
-                "CatchParameterList": 1,
+                "CatchParameterList": 0,
                 "CatchOpeningBrace": 1,
                 "CatchClosingBrace": 1,
+                "CatchKeyword": 1,
                 "CommaOperator": 0,
                 "ConditionalExpressionConsequent": 1,
                 "ConditionalExpressionAlternate": 1,
@@ -230,9 +246,10 @@
                 "BinaryExpressionOperator": 1,
                 "BlockComment": 1,
                 "CallExpression": 0,
-                "CatchParameterList": 1,
+                "CatchParameterList": 0,
                 "CatchOpeningBrace": 1,
                 "CatchClosingBrace": 1,
+                "CatchKeyword": 1,
                 "CommaOperator": 1,
                 "ConditionalExpressionConsequent": 1,
                 "ConditionalExpressionTest": 1,
