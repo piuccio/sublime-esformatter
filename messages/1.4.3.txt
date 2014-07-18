@@ -1,0 +1,6 @@
+New
+
+- add an option to configure nods.js path
+- format on save, disabled by default
+
+Enjoy
