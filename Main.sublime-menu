@@ -28,7 +28,7 @@
                                     "file": "${packages}/User/EsFormatter.sublime-settings"
                                 },
                                 "caption": "Settings – User"
-                            }
+                            },
                             { "caption": "-" },
                             {
                                 "command": "open_file",
