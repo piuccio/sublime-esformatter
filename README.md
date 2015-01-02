@@ -38,6 +38,20 @@ Linux
 
 The default keyboard mapping is `ctrl+alt+f` or `cmd+alf+f`.
 
+You can change the key binding at: Sublime Text -> Preferences -> Package Settings -> EsFormatter -> Key Bindings - User.
+
+	{
+	  // ES Formatter key binding
+	  "keys": ["ctrl+alt+f"], "command": "esformatter"
+	}
+
+You can also run EsFormatter automatically when saving a file: Sublime Text -> Preferences -> Package settings -> EsFormatter -> Settings - User.
+
+	{
+	    // Format the file when saved
+	    "format_on_save": false
+	}
+
 
 # Configuration
 
