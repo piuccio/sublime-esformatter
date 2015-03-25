@@ -57,13 +57,18 @@ You can also run EsFormatter automatically when saving a file: Sublime Text -> P
 
 Refer to the configuration of [esformatter](https://github.com/millermedeiros/esformatter)
 
+If you have installed your version of `esformatter` inside your project or globally, this Sublime package will use that version.
+
+You can configure the options either from `EsFormatter -> Settings - User` or from `.esformatter` file, either in your project on globally in your home directory.
+
+
 ## Preset
 
 You can use any [preset](https://github.com/millermedeiros/esformatter/tree/master/lib/preset) already available in esformatter.
 
 Modify the user settings of EsFormatter such as
 
-Preferences -> Package Settings -> EsFormatter -> Settings- User
+Preferences -> Package Settings -> EsFormatter -> Settings - User
 
 ```json
 "format_options" : {

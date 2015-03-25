@@ -1,0 +1,6 @@
+New stuff
+
+- Upgrade default version to esformatter 1.5.1
+- If you're using a local version of esformatter, read the config from `.esformatter` file
+
+Enjoy
