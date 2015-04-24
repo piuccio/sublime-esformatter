@@ -36,7 +36,7 @@ Linux
 
 # Usage
 
-The default keyboard mapping is `ctrl+alt+f` or `cmd+alf+f`.
+The default keyboard mapping is `ctrl+alt+f` or `cmd+alt+f` (that is `super+alt+f`).
 
 You can change the key binding at: Sublime Text -> Preferences -> Package Settings -> EsFormatter -> Key Bindings - User.
 
@@ -45,13 +45,17 @@ You can change the key binding at: Sublime Text -> Preferences -> Package Settin
 	  "keys": ["ctrl+alt+f"], "command": "esformatter"
 	}
 
+If you are using a custom keyboard mapping, you may want to add the following line in order to restore the Replace Panel default functionality.
+
+	{ "keys": ["super+alt+f"], "command": "show_panel", "args": {"panel": "replace", "reverse": false} },
+
+
 You can also run EsFormatter automatically when saving a file: Sublime Text -> Preferences -> Package settings -> EsFormatter -> Settings - User.
 
 	{
 	    // Format the file when saved
 	    "format_on_save": false
 	}
-
 
 # Configuration
 
