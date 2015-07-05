@@ -25,7 +25,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
         if (ignoreSelection or len(self.view.sel()) == 1 and self.view.sel()[0].empty()):
             # Only one caret and no text selected, format the whole file
             textContent = self.view.substr(sublime.Region(0, self.view.size()))
-            thread = NodeCall(textContent, format_options)
+            thread = NodeCall(textContent, getFilePath(self.view), format_options)
             thread.start()
             self.handle_thread(thread, lambda: self.replaceFile(thread, save))
         else:
@@ -35,7 +35,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
                 # Take everything from the beginning to the end of line
                 region = self.view.line(selection)
                 textContent = self.view.substr(region)
-                thread = NodeCall(textContent, format_options, len(threads), region)
+                thread = NodeCall(textContent, getFilePath(self.view), format_options, len(threads), region)
                 threads.append(thread)
                 thread.start()
 
@@ -62,7 +62,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
             for selection in self.view.sel():
                 # Take only the user selection
                 textContent = self.view.substr(selection)
-                thread = NodeCall(textContent, format_options, len(threads), selection)
+                thread = NodeCall(textContent, getFilePath(self.view), format_options, len(threads), selection)
                 threads.append(thread)
                 thread.start()
 
@@ -73,7 +73,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
         '''Replace the content of a list of selections.
         This is called when there are multiple cursors or a selection of text'''
         if (lastError):
-            sublime.error_message("Error (2):" + self.formatError(lastError))
+            sublime.error_message("Error (2):" + lastError)
         else:
             # Modify the selections from top to bottom to account for different text length
             offset = 0
@@ -87,13 +87,6 @@ class EsformatterCommand(sublime_plugin.TextCommand):
                 regions.append(region)
             self.view.run_command("esformat_update_content", {"regions": regions})
 
-
-    def formatError(self, message):
-        match = re.match( r".*__EX-MESSAGE>_(.*)_<EX-MESSAGE__.*", message, re.S)
-        if match:
-            return match.group(1)
-        else:
-            return message
 
     def handle_thread(self, thread, callback):
         if thread.is_alive():
@@ -127,11 +120,11 @@ class EsformatterCommand(sublime_plugin.TextCommand):
 
 
 class NodeCall(threading.Thread):
-    def __init__(self, code, options, id=0, region=None):
+    def __init__(self, code, path, options, id=0, region=None):
         self.code = code.encode('utf-8')
         self.region = region
         exec_path = os.path.join(sublime.packages_path(), "EsFormatter", "lib", "esformatter.js")
-        self.cmd = getNodeCommand(exec_path, options)
+        self.cmd = getNodeCommand(exec_path, path, options)
         self.result = None
         threading.Thread.__init__(self)
 
@@ -151,6 +144,14 @@ class NodeCall(threading.Thread):
                     self.error = str(stderr.decode('utf-8'))
                 else:
                     self.error = str(stderr, encoding='utf-8')
+            else:
+                response = json.loads(self.result)
+                if 'err' in response:
+                    self.error = response['err']
+                    self.result = False
+                else:
+                    self.result = response['text']
+
 
         except Exception as e:
             self.result = False
@@ -164,9 +165,16 @@ def getStartupInfo():
         return info
     return None
 
-def getNodeCommand(libPath, options=None):
+def getFilePath(view):
+    path = view.file_name()
+    if (path):
+        return str(path)
+    else:
+        return '';
+
+def getNodeCommand(libPath, filePath=None, options=None):
     if (options):
-        return [NODE.nodeName, libPath, options]
+        return [NODE.nodeName, libPath, filePath, options]
     else:
         return [NODE.nodeName, libPath]
 
