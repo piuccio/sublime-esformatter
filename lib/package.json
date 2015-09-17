@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "browserify": "x",
-    "esformatter": "0.7",
+    "esformatter": "0.7.1",
     "mout": "^0.11.0"
   },
   "license": "MIT"
