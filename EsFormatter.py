@@ -12,6 +12,22 @@ if not ON_WINDOWS:
     # Extend Path to catch Node installed via HomeBrew
     os.environ['PATH'] += ':/usr/local/bin'
 
+def getNpmGlobalRoot():
+    # determine NPM global root
+    try:
+        return subprocess.check_output(["npm", "root", "-g"]).rstrip().decode('utf-8')
+    except:
+        # NPM not installed or not accessible
+        return None
+
+# Extend NODE_PATH to make globally installed esformatter requirable
+npmRoot = getNpmGlobalRoot()
+if npmRoot:
+    if hasattr(os.environ, 'NODE_PATH'):
+        os.environ['NODE_PATH'] += os.pathsep + npmRoot
+    else:
+        os.environ['NODE_PATH'] = npmRoot
+
 class EsformatterCommand(sublime_plugin.TextCommand):
     def run(self, edit, save=False, ignoreSelection=False):
         # Settings for formatting
