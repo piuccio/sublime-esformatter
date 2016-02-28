@@ -2,7 +2,48 @@ import sublime, sublime_plugin, subprocess, threading, json, re, platform, sys, 
 
 ON_WINDOWS = platform.system() is 'Windows'
 ST2 = sys.version_info < (3, 0)
-NODE = None
+
+class NodeCheck:
+    '''This class check whether node.js is installed and available in the path.
+    The check is done only once when mightWork() is called for the first time.
+    Being a tri-state class it's better not accessing it's properties but only call mightWork()'''
+    def __init__(self):
+        self.works = False
+        self.checkDone = False
+        self.nodeName = "node"
+
+    def mightWork(self, path):
+        if (self.checkDone):
+            return self.works
+
+        if (path):
+            self.nodeName = path
+            self.tryWithSelfName()
+        else:
+            self.autodetect()
+
+        if (self.works is False):
+            sublime.error_message("It looks like node is not installed.\nPlease make sure that node.js is installed and in your PATH")
+
+        return self.works
+
+    def autodetect(self):
+        # Run node version to know if it's in the path
+        self.tryWithSelfName()
+        if (self.works is False):
+            self.nodeName = "nodejs"
+            self.tryWithSelfName()
+
+    def tryWithSelfName(self):
+        try:
+            # call node version with whatever path is defined in nodeName
+            subprocess.Popen([self.nodeName, "--version"], bufsize=1, stdin=None, stdout=None, stderr=None, startupinfo=getStartupInfo())
+            self.works = True
+        except OSError as e:
+            self.works = False
+
+
+NODE = NodeCheck()
 # I don't really like this, but formatting is async, so I must
 # save the file again after it's been formatted (auto_format)
 # This flag prevents loops
@@ -36,12 +77,10 @@ class EsformatterCommand(sublime_plugin.TextCommand):
         if (NODE.mightWork(settings.get("nodejs_path")) == False):
             return
 
-        format_options = json.dumps(settings.get("format_options"))
-
         if (ignoreSelection or len(self.view.sel()) == 1 and self.view.sel()[0].empty()):
             # Only one caret and no text selected, format the whole file
             textContent = self.view.substr(sublime.Region(0, self.view.size()))
-            thread = NodeCall(textContent, getFilePath(self.view), format_options)
+            thread = NodeCall(textContent, getFilePath(self.view))
             thread.start()
             self.handle_thread(thread, lambda: self.replaceFile(thread, save))
         else:
@@ -51,7 +90,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
                 # Take everything from the beginning to the end of line
                 region = self.view.line(selection)
                 textContent = self.view.substr(region)
-                thread = NodeCall(textContent, getFilePath(self.view), format_options, len(threads), region)
+                thread = NodeCall(textContent, getFilePath(self.view), len(threads), region)
                 threads.append(thread)
                 thread.start()
 
@@ -60,8 +99,6 @@ class EsformatterCommand(sublime_plugin.TextCommand):
 
     def replaceFile(self, thread, save=False):
         '''Replace the entire file content with the formatted text.'''
-        if thread.code == thread.result.encode('utf-8'):
-            return
         self.view.run_command("esformat_update_content", {"text": thread.result})
         sublime.status_message("File formatted")
         if (save):
@@ -97,8 +134,6 @@ class EsformatterCommand(sublime_plugin.TextCommand):
             offset = 0
             regions = []
             for thread in sorted(threads, key=lambda t: t.region.begin()):
-                if thread.code == thread.result.encode('utf-8'):
-                    continue
                 if offset:
                     region = [thread.region.begin() + offset, thread.region.end() + offset, thread.result]
                 else:
@@ -139,18 +174,22 @@ class EsformatterCommand(sublime_plugin.TextCommand):
             callback(process, lastError)
 
 
+import tempfile
+
 class NodeCall(threading.Thread):
-    def __init__(self, code, path, options, id=0, region=None):
+    def __init__(self, code, path, id=0, region=None):
         self.code = code.encode('utf-8')
         self.region = region
-        exec_path = os.path.join(sublime.packages_path(), "EsFormatter", "lib", "esformatter.js")
-        self.cmd = getNodeCommand(exec_path, path, options)
         self.result = None
         threading.Thread.__init__(self)
 
     def run(self):
         try:
-            process = subprocess.Popen(self.cmd, bufsize=160*len(self.code), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=getStartupInfo())
+            f = tempfile.NamedTemporaryFile(delete=False)
+            f.write(self.code)
+            f.close()
+
+            process = subprocess.Popen(["esformatter", f.name], bufsize=160*len(self.code), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=getStartupInfo())
             if ST2:
                 stdout, stderr = process.communicate(self.code)
                 self.result = re.sub(r'(\r|\r\n|\n)\Z', '', stdout).decode('utf-8')
@@ -164,14 +203,6 @@ class NodeCall(threading.Thread):
                     self.error = str(stderr.decode('utf-8'))
                 else:
                     self.error = str(stderr, encoding='utf-8')
-            else:
-                response = json.loads(self.result)
-                if 'err' in response:
-                    self.error = response['err']
-                    self.result = False
-                else:
-                    self.result = response['text']
-
 
         except Exception as e:
             self.result = False
@@ -191,54 +222,6 @@ def getFilePath(view):
         return str(path)
     else:
         return '';
-
-def getNodeCommand(libPath, filePath=None, options=None):
-    if (options):
-        return [NODE.nodeName, libPath, filePath, options]
-    else:
-        return [NODE.nodeName, libPath]
-
-class NodeCheck:
-    '''This class check whether node.js is installed and available in the path.
-    The check is done only once when mightWork() is called for the first time.
-    Being a tri-state class it's better not accessing it's properties but only call mightWork()'''
-    def __init__(self):
-        self.works = False
-        self.checkDone = False
-        self.nodeName = "node"
-
-    def mightWork(self, path):
-        if (self.checkDone):
-            return self.works
-
-        if (path):
-            self.nodeName = path
-            self.tryWithSelfName()
-        else:
-            self.autodetect()
-
-        if (self.works is False):
-            sublime.error_message("It looks like node is not installed.\nPlease make sure that node.js is installed and in your PATH")
-
-        return self.works
-
-    def autodetect(self):
-        # Run node version to know if it's in the path
-        self.tryWithSelfName()
-        if (self.works is False):
-            self.nodeName = "nodejs"
-            self.tryWithSelfName()
-
-    def tryWithSelfName(self):
-        try:
-            # call node version with whatever path is defined in nodeName
-            subprocess.Popen(getNodeCommand("--version"), bufsize=1, stdin=None, stdout=None, stderr=None, startupinfo=getStartupInfo())
-            self.works = True
-        except OSError as e:
-            self.works = False
-
-
-NODE = NodeCheck()
 
 class EsformatUpdateContent(sublime_plugin.TextCommand):
     def run(self, edit, text=None, regions=None):
