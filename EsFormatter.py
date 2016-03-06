@@ -188,8 +188,8 @@ class NodeCall(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
+        f = tempfile.NamedTemporaryFile(delete=False)
         try:
-            f = tempfile.NamedTemporaryFile(delete=False)
             f.write(self.code)
             f.close()
 
@@ -211,6 +211,9 @@ class NodeCall(threading.Thread):
         except Exception as e:
             self.result = False
             self.error = str(e)
+
+        finally:
+            os.remove(f.name)
 
 def getStartupInfo():
     if ON_WINDOWS:
