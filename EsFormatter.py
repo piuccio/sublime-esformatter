@@ -99,6 +99,8 @@ class EsformatterCommand(sublime_plugin.TextCommand):
 
     def replaceFile(self, thread, save=False):
         '''Replace the entire file content with the formatted text.'''
+        if thread.code == thread.result.encode('utf-8'):
+            return
         self.view.run_command("esformat_update_content", {"text": thread.result})
         sublime.status_message("File formatted")
         if (save):
@@ -134,6 +136,8 @@ class EsformatterCommand(sublime_plugin.TextCommand):
             offset = 0
             regions = []
             for thread in sorted(threads, key=lambda t: t.region.begin()):
+                if thread.code == thread.result.encode('utf-8'):
+                    continue
                 if offset:
                     region = [thread.region.begin() + offset, thread.region.end() + offset, thread.result]
                 else:
