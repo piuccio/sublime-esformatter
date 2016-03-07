@@ -178,8 +178,6 @@ class EsformatterCommand(sublime_plugin.TextCommand):
             callback(process, lastError)
 
 
-import tempfile
-
 class NodeCall(threading.Thread):
     def __init__(self, code, path, id=0, region=None):
         self.code = code.encode('utf-8')
@@ -188,12 +186,15 @@ class NodeCall(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        f = tempfile.NamedTemporaryFile(delete=False)
         try:
-            f.write(self.code)
-            f.close()
-
-            process = subprocess.Popen(["esformatter", f.name], bufsize=160*len(self.code), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=getStartupInfo())
+            process = subprocess.Popen(
+                ["esformatter"],
+                bufsize=160*len(self.code),
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                startupinfo=getStartupInfo(),
+                shell=True)
             if ST2:
                 stdout, stderr = process.communicate(self.code)
                 self.result = re.sub(r'(\r|\r\n|\n)\Z', '', stdout).decode('utf-8')
@@ -211,9 +212,6 @@ class NodeCall(threading.Thread):
         except Exception as e:
             self.result = False
             self.error = str(e)
-
-        finally:
-            os.remove(f.name)
 
 def getStartupInfo():
     if ON_WINDOWS:
