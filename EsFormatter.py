@@ -94,7 +94,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
                 threads.append(thread)
                 thread.start()
 
-            self.handle_threads(threads, lambda process, lastError: self.handleSyntaxErrors(process, lastError, format_options))
+            self.handle_threads(threads, lambda process, lastError: self.handleSyntaxErrors(process, lastError))
 
 
     def replaceFile(self, thread, save=False):
@@ -108,7 +108,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
 
 
 
-    def handleSyntaxErrors(self, threads=None, lastError=None, format_options=''):
+    def handleSyntaxErrors(self, threads=None, lastError=None):
         '''When formatting whole lines there might be a syntax error because we select
         the whole line content. In that case, fall-back to the user selection.'''
         if (lastError is None and threads is not None):
@@ -119,7 +119,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
             for selection in self.view.sel():
                 # Take only the user selection
                 textContent = self.view.substr(selection)
-                thread = NodeCall(textContent, getFilePath(self.view), format_options, len(threads), selection)
+                thread = NodeCall(textContent, getFilePath(self.view), len(threads), selection)
                 threads.append(thread)
                 thread.start()
 
