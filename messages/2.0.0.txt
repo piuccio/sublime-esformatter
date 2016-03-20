@@ -1,0 +1,11 @@
+## Big changes
+
+Sublime EsFormatter 2.x does not include a bundled version of esformatter anymore.
+
+If you haven't done it yet, you should install esformatter globally running
+
+---
+npm install -g esformatter
+---
+
+This is an extra step when installing this package, but it gives you the flexibility of using any version and plugins you like.

@@ -4,13 +4,13 @@ ON_WINDOWS = platform.system() is 'Windows'
 ST2 = sys.version_info < (3, 0)
 
 class NodeCheck:
-    '''This class check whether node.js is installed and available in the path.
+    '''This class check whether esformatter is installed and available in the path.
     The check is done only once when mightWork() is called for the first time.
     Being a tri-state class it's better not accessing it's properties but only call mightWork()'''
     def __init__(self):
         self.works = False
         self.checkDone = False
-        self.nodeName = "node"
+        self.nodeName = "esformatter"
 
     def mightWork(self, path):
         if (self.checkDone):
@@ -18,21 +18,13 @@ class NodeCheck:
 
         if (path):
             self.nodeName = path
-            self.tryWithSelfName()
-        else:
-            self.autodetect()
+
+        self.tryWithSelfName()
 
         if (self.works is False):
-            sublime.error_message("It looks like node is not installed.\nPlease make sure that node.js is installed and in your PATH")
+            sublime.error_message("It looks like esformatter is not installed.\nPlease make sure that it is installed and is in your PATH")
 
         return self.works
-
-    def autodetect(self):
-        # Run node version to know if it's in the path
-        self.tryWithSelfName()
-        if (self.works is False):
-            self.nodeName = "nodejs"
-            self.tryWithSelfName()
 
     def tryWithSelfName(self):
         try:
@@ -74,7 +66,7 @@ class EsformatterCommand(sublime_plugin.TextCommand):
         # Settings for formatting
         settings = sublime.load_settings("EsFormatter.sublime-settings")
 
-        if (NODE.mightWork(settings.get("nodejs_path")) == False):
+        if (NODE.mightWork(settings.get("esformatter_path")) == False):
             return
 
         if (ignoreSelection or len(self.view.sel()) == 1 and self.view.sel()[0].empty()):
@@ -193,8 +185,7 @@ class NodeCall(threading.Thread):
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                startupinfo=getStartupInfo(),
-                shell=True)
+                startupinfo=getStartupInfo())
             if ST2:
                 stdout, stderr = process.communicate(self.code)
                 self.result = re.sub(r'(\r|\r\n|\n)\Z', '', stdout).decode('utf-8')
