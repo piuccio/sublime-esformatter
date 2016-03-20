@@ -6,6 +6,11 @@ It is based on [esformatter](https://github.com/millermedeiros/esformatter), an 
 
 Unlike other beautifiers it gives complete control over the coding style.
 
+# Requirements
+
+You MUST have nodejs installed, and esformatter must be included in your `$PATH`. This complicates the setup slightly but 
+you can configure things anyway you want
+
 # Installation
 
 Using [Sublime Package Control](http://wbond.net/sublime_packages/package_control) just search for
