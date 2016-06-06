@@ -8,7 +8,9 @@ Unlike other beautifiers it gives complete control over the coding style.
 
 # Requirements
 
-You MUST have Node.js and `esformatter` installed globally and included in your `$PATH`. This complicates the setup slightly but you can configure things anyway you want.
+You MUST have Node.js installed globally and included in your `$PATH`.
+
+You can either install `esformatter` globally or under your current project's `node_modules` folder. This complicates the setup slightly but you can configure things anyway you want.
 
 ```
 npm install -g esformatter

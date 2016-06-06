@@ -4,6 +4,8 @@
 
     // Path to the esformatter executable, by default it tries to resolve the executable
     // for the command 'esformatter'. Change this value to specify your own path
-    "esformatter_path": null
+    "esformatter_path": null,
 
+    // File names to search for local config file
+    "esformatter_config_file": [".esformatter", ".esformatter.json"]
 }
