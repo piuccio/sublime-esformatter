@@ -39,7 +39,7 @@ class NodeCheck:
             self.works = False
 
 def findExecutablePath(folder):
-    target = os.path.join(folder, 'node_modules\\esformatter\\bin\\esformatter')
+    target = os.path.join(folder, 'node_modules', 'esformatter', 'bin', 'esformatter')
     if (os.path.isfile(target)):
         return target
     else:
