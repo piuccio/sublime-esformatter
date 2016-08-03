@@ -206,6 +206,12 @@ class NodeCall(threading.Thread):
         self.result = None
         threading.Thread.__init__(self)
 
+    def readResult(self, stdout):
+        if ST2:
+            return stdout.decode('utf-8')
+        else:
+            return str(stdout, encoding='utf-8')
+
     def run(self):
         try:
             sublime.status_message("Formatting file...")
@@ -228,19 +234,16 @@ class NodeCall(threading.Thread):
                 stderr=subprocess.PIPE,
                 startupinfo=getStartupInfo())
 
-            if ST2:
-                stdout, stderr = process.communicate(self.code)
-                self.result = re.sub(r'(\r|\r\n|\n)\Z', '', stdout).decode('utf-8')
-            else:
-                stdout, stderr = process.communicate(self.code)
-                self.result = re.sub(r'(\r|\r\n|\n)\Z', '', str(stdout, encoding='utf-8'))
+            stdout, stderr = process.communicate(self.code)
 
             if stderr:
                 self.result = False
-                if ST2:
-                    self.error = str(stderr.decode('utf-8'))
-                else:
-                    self.error = str(stderr, encoding='utf-8')
+                self.error = self.readResult(stderr)
+            else:
+                self.result = self.readResult(stdout)
+
+                if self.region:
+                    self.result = re.sub(r'(\r|\r\n|\n)\Z', '', self.result)
 
         except Exception as e:
             self.result = False
